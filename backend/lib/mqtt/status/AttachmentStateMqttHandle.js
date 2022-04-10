@@ -1,4 +1,8 @@
+const ComponentType = require("../homeassistant/ComponentType");
 const DataType = require("../homie/DataType");
+const EntityCategory = require("../homeassistant/EntityCategory");
+const HassAnchor = require("../homeassistant/HassAnchor");
+const InLineHassComponent = require("../homeassistant/components/InLineHassComponent");
 const PropertyMqttHandle = require("../handles/PropertyMqttHandle");
 const RobotStateNodeMqttHandle = require("../handles/RobotStateNodeMqttHandle");
 const stateAttrs = require("../../entities/state/attributes");
@@ -31,7 +35,44 @@ class AttachmentStateMqttHandle extends RobotStateNodeMqttHandle {
                     " is installed. Attachments not compatible with your robot may be included (but set to `false`)" +
                     " and you can safely ignore them."
             }));
+
+            if (this.hasAttachment(attachment)) {
+                this.controller.withHass((hass) => {
+                    this.attachHomeAssistantComponent(
+                        new InLineHassComponent({
+                            hass: hass,
+                            robot: this.robot,
+                            name: "AttachmentStateAttribute_" + attachment,
+                            friendlyName: ATTACHMENT_FRIENDLY_NAME[attachment] + " attached" ?? "Unknown",
+                            componentType: ComponentType.BINARY_SENSOR,
+                            baseTopicReference: HassAnchor.getTopicReference(HassAnchor.REFERENCE.HASS_ATTACHMENT_STATE + attachment),
+                            autoconf: {
+                                state_topic: HassAnchor.getTopicReference(HassAnchor.REFERENCE.HASS_ATTACHMENT_STATE + attachment),
+                                icon: ATTACHMENT_ICON[attachment],
+                                entity_category: EntityCategory.DIAGNOSTIC,
+                                payload_on: true,
+                                payload_off: false
+                            },
+                            topics: {
+                                "": HassAnchor.getAnchor(HassAnchor.ANCHOR.ATTACHMENT_STATE + attachment)
+                            }
+                        })
+                    );
+                });
+            }
         }
+    }
+
+    /**
+     * @private
+     * @param {string} attachment
+     * @return {boolean}
+     */
+    hasAttachment(attachment) {
+        return this.robot.state.hasMatchingAttribute({
+            attributeClass: stateAttrs.AttachmentStateAttribute.name,
+            attributeType: attachment
+        });
     }
 
     /**
@@ -55,12 +96,28 @@ class AttachmentStateMqttHandle extends RobotStateNodeMqttHandle {
     getInterestingStatusAttributes() {
         return [{attributeClass: stateAttrs.AttachmentStateAttribute.name}];
     }
+
+    async refresh() {
+        for (const attachment of Object.values(stateAttrs.AttachmentStateAttribute.TYPE)) {
+            if (this.hasAttachment(attachment)) {
+                await HassAnchor.getAnchor(HassAnchor.ANCHOR.ATTACHMENT_STATE + attachment).post(this.isAttached(attachment));
+            }
+        }
+
+        await super.refresh();
+    }
 }
 
 const ATTACHMENT_FRIENDLY_NAME = Object.freeze({
     [stateAttrs.AttachmentStateAttribute.TYPE.DUSTBIN]: "Dust bin",
     [stateAttrs.AttachmentStateAttribute.TYPE.WATERTANK]: "Water tank",
     [stateAttrs.AttachmentStateAttribute.TYPE.MOP]: "Mop"
+});
+
+const ATTACHMENT_ICON = Object.freeze({
+    [stateAttrs.AttachmentStateAttribute.TYPE.DUSTBIN]: "mdi:delete",
+    [stateAttrs.AttachmentStateAttribute.TYPE.WATERTANK]: "mdi:water",
+    [stateAttrs.AttachmentStateAttribute.TYPE.MOP]: "mdi:paperclip"
 });
 
 module.exports = AttachmentStateMqttHandle;

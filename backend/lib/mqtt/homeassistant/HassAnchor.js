@@ -203,6 +203,7 @@ HassAnchor.TYPE = Object.freeze({
 });
 
 HassAnchor.ANCHOR = Object.freeze({
+    ATTACHMENT_STATE: "attachment_state_",
     BATTERY_LEVEL: "battery_level",
     BATTERY_CHARGING: "battery_charging",
     CONSUMABLE_VALUE: "consumable_value_",
@@ -226,6 +227,7 @@ HassAnchor.REFERENCE = Object.freeze({
     FAN_SPEED_PRESETS: "fan_speed_presets", // Actually contains the presets, not a topic
     GOTO_PRESETS: "goto_presets",
     ZONE_PRESETS: "zone_presets",
+    HASS_ATTACHMENT_STATE: "hass_attachment_state_",
     HASS_CONSUMABLE_STATE: "hass_consumable_state_",
     HASS_GOTO_LOCATION_STATE: "hass_goto_location_state",
     HASS_MAP_SEGMENTS_STATE: "hass_map_segments_state",
