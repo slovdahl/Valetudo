@@ -35,44 +35,32 @@ class AttachmentStateMqttHandle extends RobotStateNodeMqttHandle {
                     " is installed. Attachments not compatible with your robot may be included (but set to `false`)" +
                     " and you can safely ignore them."
             }));
-
-            if (this.hasAttachment(attachment)) {
-                this.controller.withHass((hass) => {
-                    this.attachHomeAssistantComponent(
-                        new InLineHassComponent({
-                            hass: hass,
-                            robot: this.robot,
-                            name: "AttachmentStateAttribute_" + attachment,
-                            friendlyName: ATTACHMENT_FRIENDLY_NAME[attachment] + " attached" ?? "Unknown",
-                            componentType: ComponentType.BINARY_SENSOR,
-                            baseTopicReference: HassAnchor.getTopicReference(HassAnchor.REFERENCE.HASS_ATTACHMENT_STATE + attachment),
-                            autoconf: {
-                                state_topic: HassAnchor.getTopicReference(HassAnchor.REFERENCE.HASS_ATTACHMENT_STATE + attachment),
-                                icon: ATTACHMENT_ICON[attachment],
-                                entity_category: EntityCategory.DIAGNOSTIC,
-                                payload_on: true,
-                                payload_off: false
-                            },
-                            topics: {
-                                "": HassAnchor.getAnchor(HassAnchor.ANCHOR.ATTACHMENT_STATE + attachment)
-                            }
-                        })
-                    );
-                });
-            }
         }
-    }
 
-    /**
-     * @private
-     * @param {string} attachment
-     * @return {boolean}
-     */
-    hasAttachment(attachment) {
-        return this.robot.state.hasMatchingAttribute({
-            attributeClass: stateAttrs.AttachmentStateAttribute.name,
-            attributeType: attachment
-        });
+        for (const attachment of Object.values(this.robot.getModelDetails().supportedAttachments)) {
+            this.controller.withHass((hass) => {
+                this.attachHomeAssistantComponent(
+                    new InLineHassComponent({
+                        hass: hass,
+                        robot: this.robot,
+                        name: "AttachmentStateAttribute_" + attachment,
+                        friendlyName: ATTACHMENT_FRIENDLY_NAME[attachment] + " attached" ?? "Unknown",
+                        componentType: ComponentType.BINARY_SENSOR,
+                        baseTopicReference: HassAnchor.getTopicReference(HassAnchor.REFERENCE.HASS_ATTACHMENT_STATE + attachment),
+                        autoconf: {
+                            state_topic: HassAnchor.getTopicReference(HassAnchor.REFERENCE.HASS_ATTACHMENT_STATE + attachment),
+                            icon: ATTACHMENT_ICON[attachment],
+                            entity_category: EntityCategory.DIAGNOSTIC,
+                            payload_on: "true",
+                            payload_off: "false"
+                        },
+                        topics: {
+                            "": HassAnchor.getAnchor(HassAnchor.ANCHOR.ATTACHMENT_STATE + attachment)
+                        }
+                    })
+                );
+            });
+        }
     }
 
     /**
@@ -98,10 +86,8 @@ class AttachmentStateMqttHandle extends RobotStateNodeMqttHandle {
     }
 
     async refresh() {
-        for (const attachment of Object.values(stateAttrs.AttachmentStateAttribute.TYPE)) {
-            if (this.hasAttachment(attachment)) {
-                await HassAnchor.getAnchor(HassAnchor.ANCHOR.ATTACHMENT_STATE + attachment).post(this.isAttached(attachment));
-            }
+        for (const attachment of Object.values(this.robot.getModelDetails().supportedAttachments)) {
+            await HassAnchor.getAnchor(HassAnchor.ANCHOR.ATTACHMENT_STATE + attachment).post(this.isAttached(attachment));
         }
 
         await super.refresh();
